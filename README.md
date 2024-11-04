@@ -9,7 +9,9 @@ To run the model:
 e.g.
 
 `python svm.py`
-
+### Dataset
+`cd data`
+The dataset files are named according to the convention of `<action>\<direction>_<index>.csv`
 ### Data Preprocessing
 
 
@@ -20,4 +22,4 @@ e.g.
 
 ### Result
 
-**7/12** accuracy for now. (lightgbm)
+**8/12** accuracy for now. (lightgbm)
