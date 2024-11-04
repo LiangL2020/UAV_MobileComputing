@@ -1,7 +1,7 @@
-CS528 group project
+# CS528 group project
 
 Supported models: **lightgbm, svm**
-
+### Setup
 To run the model:
 
 `python <model_name>.py`
