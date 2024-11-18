@@ -20,10 +20,8 @@ def parse_line(line, line_data, start_time):
     """Parse the line and update line_data dictionary with the new data."""
     try:
         if "time" in line:
-            time_stamp = float(line.split("time:")[1].strip())
-            if start_time[0] == 0: 
-                start_time[0] = time_stamp
-            line_data['timestamp'] = round(time_stamp - start_time[0], 3)
+            time_stamp = time.time() - start_time
+            line_data['timestamp'] = round(time_stamp, 3)
         elif "acce_x" in line:
             acce_data = line.split("mpu6050 test: ")[1]
             acce_x, acce_y, acce_z = [float(val.split(":")[1]) for val in acce_data.split(",")]
@@ -38,9 +36,9 @@ def parse_line(line, line_data, start_time):
     required_keys = ['timestamp', 'acce_x', 'acce_y', 'acce_z', 'gyro_x', 'gyro_y', 'gyro_z']
     return all(key in line_data for key in required_keys)
 
-def collect_gesture_data(ser, gesture_name, series_name, num_in_series, duration=5):
+def collect_gesture_data(ser, gesture_name, num_in_series, duration=5):
     """Collect data for a specific gesture and save to a CSV file."""
-    data_dir = os.path.join('.', 'data', series_name)
+    data_dir = os.path.join('.', 'data', gesture_name)
     os.makedirs(data_dir, exist_ok=True)
 
     file_path = os.path.join(data_dir, f"{gesture_name}_{num_in_series}.csv")
@@ -52,14 +50,13 @@ def collect_gesture_data(ser, gesture_name, series_name, num_in_series, duration
             writer.writeheader()
             line_data = {} 
             start_time = time.time()
-            norm_time = [0] 
 
-            while time.time() - start_time < duration:
+            while time.time() - start_time <= duration:
                 if ser.in_waiting > 0:
                     line = ser.readline().decode('utf-8').rstrip()
                     print(line)
                     
-                    if parse_line(line, line_data, norm_time):
+                    if parse_line(line, line_data, start_time):
                         writer.writerow(line_data)
                         line_data.clear() 
 
@@ -75,15 +72,14 @@ def main():
         return
 
     gestures = ["up", "down", "left", "right"]
-    series_name = "tilted"
-    duration = 3
-    num_collect = 5
+    duration = 4
+    num_collect = 21
 
     try: 
         for gesture in gestures:
             for i in range(num_collect):
                 input(f"Press Enter to start collecting data for '{gesture}_{i}' gesture...")
-                collect_gesture_data(ser, gesture, series_name=series_name, num_in_series=i, duration=duration)
+                collect_gesture_data(ser, gesture, num_in_series=i, duration=duration)
 
     except KeyboardInterrupt:
         print("Data collection interrupted by user.")
