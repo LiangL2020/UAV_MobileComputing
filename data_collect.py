@@ -9,7 +9,7 @@ def get_port():
     for port, desc, hwid in ports:
         print(f"Port: {port}, Description: {desc}, Hardware ID: {hwid}")
 
-def open_serial_port(port='/dev/cu.usbserial-110', baudrate=115200):
+def open_serial_port(port='COM7', baudrate=115200):
     try:
         return serial.Serial(port, baudrate, timeout=1)
     except serial.SerialException as e:
@@ -36,13 +36,13 @@ def parse_line(line, line_data, start_time):
     required_keys = ['timestamp', 'acce_x', 'acce_y', 'acce_z', 'gyro_x', 'gyro_y', 'gyro_z']
     return all(key in line_data for key in required_keys)
 
-def collect_gesture_data(ser, gesture_name, num_in_series, duration=5):
+def collect_gesture_data(ser, gesture_name, direction, num_in_series, duration=5):
     """Collect data for a specific gesture and save to a CSV file."""
-    data_dir = os.path.join('.', 'data', gesture_name)
+    data_dir = os.path.join('.', 'data', 'zixin', gesture_name)
     os.makedirs(data_dir, exist_ok=True)
 
-    file_path = os.path.join(data_dir, f"{gesture_name}_{num_in_series}.csv")
-    print(f"Collecting data for '{gesture_name}_{num_in_series}' gesture, saving to {file_path}")
+    file_path = os.path.join(data_dir, f"{direction}_{num_in_series}.csv")
+    print(f"Collecting data for '{direction}_{num_in_series}' gesture, saving to {file_path}")
 
     try:
         with open(file_path, mode='w', newline='') as file:
@@ -70,16 +70,19 @@ def main():
     if ser is None:
         print("Could not open serial port. Exiting...")
         return
-
-    gestures = ["up", "down", "left", "right"]
+    # gestures = ['straight', 'curved', 'tilted']
+    # directions = ["up", "down", "left", "right"]
+    gestures = ['rotate']
+    directions = ['clockwise','counter_clockwise']
     duration = 4
-    num_collect = 21
+    num_collect = 10
 
     try: 
         for gesture in gestures:
-            for i in range(num_collect):
-                input(f"Press Enter to start collecting data for '{gesture}_{i}' gesture...")
-                collect_gesture_data(ser, gesture, num_in_series=i, duration=duration)
+            for direction in directions:
+                for i in range(num_collect):
+                    input(f"Press Enter to start collecting data for '{gesture}/{direction}_{i}' gesture...")
+                    collect_gesture_data(ser, gesture, direction, num_in_series=i, duration=duration)
 
     except KeyboardInterrupt:
         print("Data collection interrupted by user.")
