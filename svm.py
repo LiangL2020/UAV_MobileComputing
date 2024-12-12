@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+from sklearn.svm import SVC
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -8,7 +9,7 @@ from sklearn.metrics import classification_report
 
 data_root = "data_new"  # 存放 category/direction/... 数据的根目录
 output_csv = "combined_data.csv"
-
+data_aug = True
 categories = ["curved", "straight", "tilted", "rotate"]
 normal_dirs = ["up","down","left","right"]
 rotate_dirs = ["cw", "ccw"]  # rotate下的方向
@@ -85,19 +86,34 @@ y = np.array(labels)
 # min-max normalization
 scaler = MinMaxScaler()
 X_scaled = scaler.fit_transform(X)
+if data_aug:
+    # 数据扩增：加高斯噪声
+    noise_std = 0.01  # 可根据需要调整噪声强度
+    np.random.seed(42)
+    noise = np.random.normal(loc=0, scale=noise_std, size=X_scaled.shape)
+    X_aug = X_scaled + noise
+    y_aug = y.copy()
 
+    # 将原数据与有噪声的数据拼接
+    X_combined = np.concatenate([X_scaled, X_aug], axis=0)
+    y_combined = np.concatenate([y, y_aug], axis=0)
+else:
+    X_combined = X_scaled
+    y_combined = y
 # 保存到CSV（标签列使用整数ID）
-df_out = pd.DataFrame(X_scaled)
-df_out['label'] = y
+df_out = pd.DataFrame(X_combined)
+df_out['label'] = y_combined
 df_out.to_csv(os.path.join(data_root, output_csv), index=False)
 print(f"Combined dataset saved to {os.path.join(data_root, output_csv)}")
 
 # 简单训练测试划分
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, stratify=y)
+X_train, X_test, y_train, y_test = train_test_split(X_combined, y_combined, test_size=0.2, random_state=42, stratify=y_combined)
 
+# clf = SVC(kernel='rbf', random_state=42)
 clf = RandomForestClassifier(random_state=42)
 clf.fit(X_train, y_train)
 y_pred = clf.predict(X_test)
-subset_labels = [0, 5, 6, 7, 9, 10, 11]
-subset_class_names = [class_list[i] for i in subset_labels] 
-print(classification_report(y_test, y_pred, labels=subset_labels,target_names=subset_class_names))
+# subset_labels = [0, 5, 6, 7, 9, 10, 11]
+# subset_class_names = [class_list[i] for i in subset_labels] 
+# print(classification_report(y_test, y_pred, labels=subset_labels,target_names=subset_class_names))
+print(classification_report(y_test, y_pred, labels=range(len(class_list)), target_names=class_list))
