@@ -1,112 +1,103 @@
-# Required packages
 import os
-import numpy as np
 import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
-import lightgbm as lgb
-from glob import glob
 
-# Function to load and filter CSV data
-def load_and_filter_csv(file_path, max_timestamp=3):
-    df = pd.read_csv(file_path)
-    # Filter rows where the timestamp is <= max_timestamp
-    df_filtered = df[df['timestamp'] <= max_timestamp].iloc[:, 1:]  # Exclude the timestamp column
-    return df_filtered.values.flatten()  # Flatten the matrix into a single array
+data_root = "data_new"  # 存放 category/direction/... 数据的根目录
+output_csv = "combined_data.csv"
 
-# Function to add Gaussian noise to data
-def add_gaussian_noise(X, mean=0, std=0.01):
-    noise = np.random.normal(mean, std, X.shape)
-    return X + noise
+categories = ["curved", "straight", "tilted", "rotate"]
+normal_dirs = ["up","down","left","right"]
+rotate_dirs = ["cw", "ccw"]  # rotate下的方向
 
-# Prepare data and labels with full class labels
-features_list = []
-labels_list = []
-label_mapping = {}
-label_counter = 0
+# 按题意，共14类
+class_list = [
+    "curved_up", "curved_down", "curved_left", "curved_right",
+    "straight_up", "straight_down", "straight_left", "straight_right",
+    "tilted_up", "tilted_down", "tilted_left", "tilted_right",
+    "rotate_cw", "rotate_ccw"
+]
+label_to_id = {label: idx for idx, label in enumerate(class_list)}
 
-# Path to the extracted data folder
-extracted_folder_path = 'C:\\Users\\lenovo\\Downloads\\data'
+def get_label(category, direction):
+    return f"{category}_{direction}"
 
-# Load data, filter by timestamp, and prepare for training with specific labels
-for file in glob(f"{extracted_folder_path}\\*\\*.csv"):
-    # Construct the full label using directory structure and file name
-    action_category = file.split("\\")[-2]  # e.g., 'tilted'
-    direction = file.split("\\")[-1].split('_')[0]  # e.g., 'up' from 'up_4.csv'
-    action_direction_label = f"{action_category}_{direction}"
+file_list = []
+for cat in categories:
+    cat_dir = os.path.join(data_root, cat)
+    if not os.path.isdir(cat_dir):
+        continue
+    if cat == "rotate":
+        possible_dirs = rotate_dirs
+    else:
+        possible_dirs = normal_dirs
+    
+    for d in possible_dirs:
+        d_dir = os.path.join(cat_dir, d)
+        if not os.path.isdir(d_dir):
+            continue
+        for f in os.listdir(d_dir):
+            if f.lower().endswith(".csv"):
+                file_path = os.path.join(d_dir, f)
+                label_str = get_label(cat, d)
+                if label_str not in label_to_id:
+                    print(f"Warning: {label_str} not in label_to_id mapping, skipping.")
+                    continue
+                file_list.append((file_path, label_to_id[label_str]))
 
-    # Assign a numerical label if not already present
-    if action_direction_label not in label_mapping:
-        label_mapping[action_direction_label] = label_counter
-        label_counter += 1
+row_counts = []
+data_arrays = []
+labels = []
+for fpath, label_id in file_list:
+    # 使用header=0来表示第一行为表头，不作为数据行
+    df = pd.read_csv(fpath, header=0)
+    # 确保列数量正确（原本7列：1列timestamp + 6列特征）
+    if df.shape[1] != 7:
+        print(f"Warning: {fpath} does not have 7 columns after reading header, skipping.")
+        continue
+    # 忽略第一列(timestamp)
+    data = df.iloc[:,1:].values
+    if data.shape[1] != 6:
+        print(f"Warning: {fpath} after ignoring the first column does not have 6 columns, skipping.")
+        continue
+    row_counts.append(data.shape[0])
+    data_arrays.append(data)
+    labels.append(label_id)
 
-    # Load and process the CSV file
-    file_path = file
-    df = pd.read_csv(file_path)
-    df_filtered = df.iloc[:120, 1:]  # Truncate to the first 120 rows and exclude the timestamp column
-    features = df_filtered.values.flatten()  # Flatten the filtered matrix
+if len(row_counts) == 0:
+    raise ValueError("No valid files found.")
 
-    features_list.append(features)
-    labels_list.append(label_mapping[action_direction_label])
+min_n = min(row_counts)
 
-# Convert to numpy arrays
-X = np.array(features_list)
-y = np.array(labels_list)
+# 截断并展开
+truncated_data = []
+for arr in data_arrays:
+    truncated = arr[:min_n, :]
+    truncated_flat = truncated.flatten()
+    truncated_data.append(truncated_flat)
 
-# Split data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X = np.array(truncated_data)
+y = np.array(labels)
 
-# Normalize features by subtracting mean and dividing by standard deviation
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+# min-max normalization
+scaler = MinMaxScaler()
+X_scaled = scaler.fit_transform(X)
 
-# Augment training data (optional, set flag to False to skip)
-augment_train = True
-if augment_train:
-    X_train_augmented = add_gaussian_noise(X_train, std=0.01)
-    X_train_combined = np.vstack([X_train, X_train_augmented])
-    y_train_combined = np.hstack([y_train, y_train])
-else:
-    X_train_combined = X_train
-    y_train_combined = y_train
+# 保存到CSV（标签列使用整数ID）
+df_out = pd.DataFrame(X_scaled)
+df_out['label'] = y
+df_out.to_csv(os.path.join(data_root, output_csv), index=False)
+print(f"Combined dataset saved to {os.path.join(data_root, output_csv)}")
 
-# Train a LightGBM model with adjustments for limited data
-lgb_train = lgb.Dataset(X_train_combined, label=y_train_combined)
-lgb_params = {
-    'objective': 'multiclass',
-    'num_class': len(label_mapping),
-    'metric': 'multi_logloss',
-    'boosting_type': 'gbdt',
-    'num_leaves': 50,  # Reduced number of leaves
-    'learning_rate': 0.1,  # Slightly higher learning rate for faster convergence
-    'feature_fraction': 0.8,  # Use only 80% of features per iteration
-    'min_data_in_leaf': 5,  # Ensure minimum data points in each leaf
-    'reg_alpha': 0.1,  # L1 regularization
-    'reg_lambda': 0.1  # L2 regularization
-}
-lgb_model = lgb.train(
-    lgb_params, 
-    lgb_train, 
-    num_boost_round=100, 
-    valid_sets=[lgb_train],
-    early_stopping_rounds=10  # Early stopping if no improvement
-)
+# 简单训练测试划分
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, stratify=y)
 
-# Predict and evaluate the model on the test set
-y_pred = lgb_model.predict(X_test)
-y_pred_labels = np.argmax(y_pred, axis=1)
-print(y_pred_labels)
-print(y_test)
-report = classification_report(
-    y_test,
-    y_pred_labels,
-    target_names=list(label_mapping.keys()),
-    labels=list(label_mapping.values()),
-    zero_division=0
-)
-
-# Display the report and label mapping
-print(report)
-print("Label Mapping:", label_mapping)
+clf = RandomForestClassifier(random_state=42)
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+subset_labels = [0, 5, 6, 7, 9, 10, 11]
+subset_class_names = [class_list[i] for i in subset_labels] 
+print(classification_report(y_test, y_pred, labels=subset_labels,target_names=subset_class_names))
