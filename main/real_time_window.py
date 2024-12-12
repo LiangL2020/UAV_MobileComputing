@@ -10,13 +10,16 @@ import joblib
 from sklearn.preprocessing import StandardScaler
 from collections import deque
 
-SERIAL_PORT = '/dev/cu.usbserial-110'
+SERIAL_PORT = '/dev/tty.usbserial-110'
 BAUD_RATE = 115200
-TRUNCATE_LENGTH = 200 
-GESTURES = ["up", "down", "left", "right", "none"]
+TRUNCATE_LENGTH = 240
+GESTURES = [
+    "curved_up", "curved_down", "curved_left", "curved_right",
+    "straight_up", "straight_down", "straight_left", "straight_right", "none_none"
+]
 
-svm_model = joblib.load('./model/svm_model.pkl') 
-scaler = joblib.load('./model/scaler.pkl') 
+svm_model = joblib.load('../model/model.pkl')
+# scaler = joblib.load('../model/scaler.pkl')
 
 # sliding window for real-time gesture prediction
 data_buffer = deque(maxlen=TRUNCATE_LENGTH)
@@ -25,13 +28,14 @@ def preprocess_data(buffer):
     data = np.array(buffer)
     flattened_data = data.flatten()
 
-    expected_length = 1680 
+    expected_length = 1026
     if len(flattened_data) < expected_length:
         flattened_data = np.pad(flattened_data, (0, expected_length - len(flattened_data)))
     elif len(flattened_data) > expected_length:
         flattened_data = flattened_data[:expected_length]
 
-    return scaler.transform(flattened_data.reshape(1, -1))
+    # return scaler.transform(flattened_data.reshape(1, -1))
+    return flattened_data.reshape(1, -1)
 
 def parse_line(line, line_data):
     try:
@@ -76,6 +80,7 @@ if __name__ == '__main__':
                     if len(data_buffer) == TRUNCATE_LENGTH:
                         preprocessed_data = preprocess_data(data_buffer)
                         gesture = predict_gesture(svm_model, preprocessed_data)
+                        data_buffer = []
                         print(f"Predicted Gesture: {gesture}")
 
     except KeyboardInterrupt:

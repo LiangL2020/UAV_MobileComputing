@@ -9,6 +9,7 @@ tello_address = ('192.168.10.1', 8889)
 def receive_response():
     try:
         response, _ = sock.recvfrom(1024)
+        print(response)
         print(f"Response: {response.decode('utf-8')}")
     except Exception as e:
         print(f"Error receiving response: {e}")
