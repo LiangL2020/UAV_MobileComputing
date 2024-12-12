@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
-
+import joblib
 data_root = "data_new"  # 存放 category/direction/... 数据的根目录
 output_csv = "combined_data.csv"
 data_aug = True
@@ -117,3 +117,4 @@ y_pred = clf.predict(X_test)
 # subset_class_names = [class_list[i] for i in subset_labels] 
 # print(classification_report(y_test, y_pred, labels=subset_labels,target_names=subset_class_names))
 print(classification_report(y_test, y_pred, labels=range(len(class_list)), target_names=class_list))
+joblib.dump(clf, 'model.pkl')
