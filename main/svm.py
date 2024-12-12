@@ -86,6 +86,7 @@ y = np.array(labels)
 # min-max normalization
 scaler = MinMaxScaler()
 X_scaled = scaler.fit_transform(X)
+joblib.dump(scaler, './model/scaler.pkl')
 if data_aug:
     # 数据扩增：加高斯噪声
     noise_std = 0.01  # 可根据需要调整噪声强度
