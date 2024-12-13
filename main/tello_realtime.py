@@ -3,6 +3,7 @@ from collections import deque
 import numpy as np
 import serial
 import joblib
+import time
 
 # create socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -70,6 +71,7 @@ if __name__ == "__main__":
     print('command')
     sock.sendto('command'.encode(), tello_address)
     receive_response()
+    # time.sleep(3)
 
     taken_off = False
 
@@ -93,7 +95,6 @@ if __name__ == "__main__":
                     if len(data_buffer) == TRUNCATE_LENGTH:
                         preprocessed_data = preprocess_data(data_buffer)
                         gesture = predict_gesture(svm_model, preprocessed_data)
-                        data_buffer = []
                         print(f"Predicted Gesture: {gesture}")
 
                         if gesture == "curved_up":
@@ -101,10 +102,18 @@ if __name__ == "__main__":
                             print('takeoff')
                             sock.sendto('takeoff'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
+
                         else:
                             # sock.sendto('rc 0 0 0 0'.encode(), tello_address)
                             # receive_response()
                             print("please takeoff")
+                            # time.sleep(3)
+
+                        time.sleep(1)
+                        print('start gesture')
+                        data_buffer = []
+
 
         while taken_off:
             if ser.in_waiting > 0:
@@ -121,7 +130,6 @@ if __name__ == "__main__":
                     if len(data_buffer) == TRUNCATE_LENGTH:
                         preprocessed_data = preprocess_data(data_buffer)
                         gesture = predict_gesture(svm_model, preprocessed_data)
-                        data_buffer = []
                         print(f"Predicted Gesture: {gesture}")
 
                         # if gesture == "curved_up":
@@ -132,33 +140,46 @@ if __name__ == "__main__":
                             print('land')
                             sock.sendto('land'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
                         elif gesture == "curved_left":
                             print('rotate counterclockwise')
                             sock.sendto('ccw 90'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
                         elif gesture == "curved_right":
                             print('rotate clockwise')
                             sock.sendto('cw 90'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
                         elif gesture == "straight_up":
                             print('up')
                             sock.sendto('up 40'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
                         elif gesture == "straight_down":
                             print('down')
                             sock.sendto('down 20'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
                         elif gesture == "straight_left":
                             print('left')
                             sock.sendto('left 40'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
                         elif gesture == "straight_right":
                             print('right')
                             sock.sendto('right 40'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
                         else:
-                            sock.sendto('rc 0 0 0 0'.encode(), tello_address)
+                            print('hover')
+                            sock.sendto('command'.encode(), tello_address)
                             receive_response()
+                            # time.sleep(3)
+
+                        time.sleep(1)
+                        print('start gesture')
+                        data_buffer = []
 
     except KeyboardInterrupt:
         print("Exiting...")

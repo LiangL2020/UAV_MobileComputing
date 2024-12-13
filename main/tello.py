@@ -28,6 +28,20 @@ if __name__ == "__main__":
     time.sleep(5)
     receive_response()
 
+    # hover
+    print('hover')
+    sock.sendto('command'.encode(), tello_address)
+    time.sleep(5)
+    receive_response()
+    print('hover')
+    sock.sendto('command'.encode(), tello_address)
+    time.sleep(5)
+    receive_response()
+    print('hover')
+    sock.sendto('command'.encode(), tello_address)
+    time.sleep(5)
+    receive_response()
+
     # up
     print('up')
     sock.sendto('up 40'.encode(), tello_address)
