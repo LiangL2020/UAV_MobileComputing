@@ -61,6 +61,7 @@ for fpath, label_id in file_list:
         print(f"Warning: {fpath} does not have 7 columns after reading header, skipping.")
         continue
 
+
     data = df.iloc[:,1:].values
     if data.shape[1] != 6:
         print(f"Warning: {fpath} after ignoring the first column does not have 6 columns, skipping.")
@@ -101,11 +102,13 @@ else:
     X_combined = X_scaled
     y_combined = y
 
+
 df_out = pd.DataFrame(X_combined)
 df_out['label'] = y_combined
 df_out.to_csv(os.path.join(data_root, output_csv), index=False)
 print(f"Combined dataset saved to {os.path.join(data_root, output_csv)}")
 
+# train 
 X_train, X_test, y_train, y_test = train_test_split(X_combined, y_combined, test_size=0.2, random_state=42, stratify=y_combined)
 
 clf = RandomForestClassifier(random_state=42)

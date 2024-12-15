@@ -2,8 +2,8 @@ import os
 import re
 import shutil
 
-original_root = "data"  # 原始目录
-new_root = "data_new"  # 新目录
+original_root = "data" 
+new_root = "data_new" 
 
 categories = ["curved", "straight", "tilted", "rotate"]
 normal_dirs = ["up","down","left","right"]
@@ -11,7 +11,6 @@ normal_dirs = ["up","down","left","right"]
 rotate_map = {
     "ccw": ["ccw", "counter_clockwise"],
     "cw": ["cw", "clockwise"]
-    
 }
 
 categories_set = set(categories)
@@ -62,7 +61,6 @@ def extract_index_from_filename(filename):
 
 files_dict = {}  # (category, direction): [(old_file_full_path, old_index), ...]
 
-# 扫描原目录，收集文件
 for root, dirs, files in os.walk(original_root):
     for f in files:
         if f.lower().endswith(".csv"):
@@ -86,14 +84,12 @@ for root, dirs, files in os.walk(original_root):
                 files_dict[key] = []
             files_dict[key].append((full_path, old_index))
 
-# 创建new_root目录（如不存在）
 os.makedirs(new_root, exist_ok=True)
 
 mapping_file_path = os.path.join(new_root, "mapping.txt")
 with open(mapping_file_path, "w", encoding="utf-8") as mapping_file:
-    # 创建新目录并复制
     for (cat, dirc), file_list in files_dict.items():
-        file_list.sort(key=lambda x: x[0])  # 按旧路径排序
+        file_list.sort(key=lambda x: x[0]) 
         out_dir = os.path.join(new_root, cat, dirc)
         os.makedirs(out_dir, exist_ok=True)
         
